@@ -1,4 +1,4 @@
-module github.com/ptrsearce/project1
+module project1
 
 go 1.18
 
