@@ -1,18 +1,47 @@
 package main
 
 import (
-	"net/http"
 	"strconv"
+	"net/http"
+	"database/sql"
+	"context"
+	"time"
+	"log"
+    "fmt"
 
-	"fmt"
-
-	"github.com/gin-gonic/gin"
+    "github.com/gin-gonic/gin"
 )
-
 type inventory struct {
 	Inventory_id int `json:"id"`
 	Quantity     int
 }
+
+
+func CreateInventoryTable(db *sql.DB) error {  
+    query :=`CREATE TABLE IF NOT EXISTS inventory (
+		inventory_id int unsigned NOT NULL,
+		quantity int DEFAULT NULL,
+		PRIMARY KEY (inventory_id),
+		UNIQUE KEY product_id_UNIQUE (inventory_id),
+		CONSTRAINT inventory_id FOREIGN KEY (inventory_id) REFERENCES product (product_id)
+	  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`
+
+    ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancelfunc()
+    res, err := db.ExecContext(ctx, query)
+    if err != nil {
+        log.Printf("Error %s when creating product table", err)
+        return err
+    }
+    rows, err := res.RowsAffected()
+    if err != nil {
+        log.Printf("Error %s when getting rows affected", err)
+        return err
+    }
+    log.Printf("Rows affected when creating table: %d", rows)
+    return nil
+}
+
 
 func GetInventoryByID(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
@@ -21,14 +50,14 @@ func GetInventoryByID(c *gin.Context) {
 
 	row := db.QueryRow("SELECT * FROM inventory WHERE inventory_id = ?", id)
 	if err := row.Scan(&ivt.Inventory_id, &ivt.Quantity); err != nil {
-		// if err == sql.ErrNoRows {
-		//    c.IndentedJSON(http.StatusNotFound, gin.H{"message": "inventory not found"})
-		//    fmt.Errorf("inventorysById %d: no such inventory", id)
-		//    return
-		// }
-		// c.IndentedJSON(http.StatusNotFound, gin.H{"message": "inventory not found"})
-		// fmt.Errorf("inventorysById %d: %v", id, err)
-		// return
+		if err == sql.ErrNoRows {
+		   c.IndentedJSON(http.StatusNotFound, gin.H{"message": "inventory not found"})
+		   fmt.Errorf("inventorysById %d: no such inventory", id)
+		   return
+		}
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "inventory not found"})
+		fmt.Errorf("inventorysById %d: %v", id, err)
+		return
 	}
 	c.IndentedJSON(http.StatusOK, ivt)
 
@@ -88,6 +117,26 @@ func PostInventorys(c *gin.Context) {
 	}
 	fmt.Print(id)
 	c.IndentedJSON(http.StatusCreated, newInventory)
+}
+
+func DeleteInventoryByID(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+
+	var ivt inventory
+
+	row := db.QueryRow("DELETE FROM inventory WHERE inventory_id = ?", id)
+	if err := row.Scan(&ivt.Inventory_id, &ivt.Quantity); err != nil {
+		if err == sql.ErrNoRows {
+		   c.IndentedJSON(http.StatusNotFound, gin.H{"message": "inventory not found"})
+		   fmt.Errorf("inventorysById %d: no such inventory", id)
+		   return
+		}
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "inventory not found"})
+		fmt.Errorf("inventorysById %d: %v", id, err)
+		return
+	}
+	c.IndentedJSON(http.StatusOK, ivt)
+
 }
 
 // &ivt.Inventory_id, &ivt.Name, &ivt.Spec, &ivt.Catg_id, &ivt.Price

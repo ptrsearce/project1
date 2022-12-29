@@ -3,6 +3,10 @@ package main
 import (
 	"strconv"
 	"net/http"
+	"database/sql"
+	"context"
+	"time"
+	"log"
     
     "fmt"
 
@@ -14,6 +18,32 @@ type category struct {
 	Name     string
 }
 
+
+func CreateCategoryTable(db *sql.DB) error {  
+    query :=`CREATE TABLE IF NOT EXISTS category (
+		category_id int NOT NULL,
+		name varchar(45) DEFAULT NULL,
+		PRIMARY KEY (category_id),
+		UNIQUE KEY category_id_UNIQUE (category_id)
+	  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`
+
+    ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancelfunc()
+    res, err := db.ExecContext(ctx, query)
+    if err != nil {
+        log.Printf("Error %s when creating product table", err)
+        return err
+    }
+    rows, err := res.RowsAffected()
+    if err != nil {
+        log.Printf("Error %s when getting rows affected", err)
+        return err
+    }
+    log.Printf("Rows affected when creating table: %d", rows)
+    return nil
+}
+
+
 func GetCategoryByID(c *gin.Context) {
     id,_ := strconv.Atoi(c.Param("id"))
 
@@ -21,14 +51,14 @@ func GetCategoryByID(c *gin.Context) {
 
     row := db.QueryRow("SELECT * FROM category WHERE category_id = ?", id)
     if err := row.Scan(&ctg.Category_id, &ctg.Name); err!=nil{
-        // if err == sql.ErrNoRows {
-        //    c.IndentedJSON(http.StatusNotFound, gin.H{"message": "category not found"})
-        //    fmt.Errorf("categorysById %d: no such category", id) 
-        //    return
-        // }
-        // c.IndentedJSON(http.StatusNotFound, gin.H{"message": "category not found"})
-        // fmt.Errorf("categorysById %d: %v", id, err)
-        // return
+        if err == sql.ErrNoRows {
+           c.IndentedJSON(http.StatusNotFound, gin.H{"message": "category not found"})
+           fmt.Errorf("categorysById %d: no such category", id) 
+           return
+        }
+        c.IndentedJSON(http.StatusNotFound, gin.H{"message": "category not found"})
+        fmt.Errorf("categorysById %d: %v", id, err)
+        return
 	}
 	c.IndentedJSON(http.StatusOK, ctg)
 
@@ -88,6 +118,26 @@ func PostCategorys(c *gin.Context) {
 	}
 	fmt.Print(id)
 	c.IndentedJSON(http.StatusCreated, newCategory)
+}
+
+func DeleteCategoryByID(c *gin.Context) {
+    id,_ := strconv.Atoi(c.Param("id"))
+
+	var ctg category
+
+    row := db.QueryRow("DELETE FROM category WHERE category_id = ?", id)
+    if err := row.Scan(&ctg.Category_id, &ctg.Name); err!=nil{
+        if err == sql.ErrNoRows {
+           c.IndentedJSON(http.StatusNotFound, gin.H{"message": "category not found"})
+           fmt.Errorf("categorysById %d: no such category", id) 
+           return
+        }
+        c.IndentedJSON(http.StatusNotFound, gin.H{"message": "category not found"})
+        fmt.Errorf("categorysById %d: %v", id, err)
+        return
+	}
+	c.IndentedJSON(http.StatusOK, ctg)
+
 }
 
 // &ctg.Category_id, &ctg.Name, &ctg.Spec, &ctg.Catg_id, &ctg.Price

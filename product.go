@@ -1,12 +1,16 @@
 package main
 
 import (
-	"strconv"
+	"context"
+	"database/sql"
+	"log"
 	"net/http"
-    
-    "fmt"
+	"strconv"
+	"time"
 
-    "github.com/gin-gonic/gin"
+	"fmt"
+
+	"github.com/gin-gonic/gin"
 )
 
 type product struct {
@@ -17,22 +21,50 @@ type product struct {
 	Price      float64 `json:"price"`
 }
 
+func CreateProductTable(db *sql.DB) error {
+	query := `CREATE TABLE IF NOT EXISTS product (
+		product_id int unsigned NOT NULL,
+		name varchar(45) DEFAULT NULL,
+		spec json DEFAULT NULL,
+		catg_id int DEFAULT NULL,
+		price float DEFAULT NULL,
+		PRIMARY KEY (product_id),
+		UNIQUE KEY product_id_UNIQUE (product_id) /*!80000 INVISIBLE */,
+		KEY catg_id_idx (catg_id),
+		CONSTRAINT catg_id FOREIGN KEY (catg_id) REFERENCES category (category_id)
+	  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`
+
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+	res, err := db.ExecContext(ctx, query)
+	if err != nil {
+		log.Printf("Error %s when creating product table", err)
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		log.Printf("Error %s when getting rows affected", err)
+		return err
+	}
+	log.Printf("Rows affected when creating table: %d", rows)
+	return nil
+}
 
 func GetProductByID(c *gin.Context) {
-    id,_ := strconv.Atoi(c.Param("id"))
+	id, _ := strconv.Atoi(c.Param("id"))
 
 	var pdt product
 
-    row := db.QueryRow("SELECT * FROM product WHERE product_id = ?", id)
-    if err := row.Scan(&pdt.Product_id, &pdt.Name, &pdt.Spec, &pdt.Catg_id, &pdt.Price); err!=nil{
-        // if err == sql.ErrNoRows {
-        //    c.IndentedJSON(http.StatusNotFound, gin.H{"message": "product not found"})
-        //    fmt.Errorf("productsById %d: no such product", id) 
-        //    return
-        // }
-        // c.IndentedJSON(http.StatusNotFound, gin.H{"message": "product not found"})
-        // fmt.Errorf("productsById %d: %v", id, err)
-        // return
+	row := db.QueryRow("SELECT * FROM product WHERE product_id = ?", id)
+	if err := row.Scan(&pdt.Product_id, &pdt.Name, &pdt.Spec, &pdt.Catg_id, &pdt.Price); err != nil {
+		if err == sql.ErrNoRows {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"message": "product not found"})
+			fmt.Errorf("productsById %d: no such product", id)
+			return
+		}
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "product not found"})
+		fmt.Errorf("productsById %d: %v", id, err)
+		return
 	}
 	c.IndentedJSON(http.StatusOK, pdt)
 
@@ -94,4 +126,28 @@ func PostProducts(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, newProduct)
 }
 
+func DeleteProductByID(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+
+	var pdt product
+
+	row := db.QueryRow("DELETE FROM product WHERE product_id = ?", id)
+	if err := row.Scan(&pdt.Product_id, &pdt.Name, &pdt.Spec, &pdt.Catg_id, &pdt.Price); err != nil {
+		if err == sql.ErrNoRows {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"message": "product not found"})
+			fmt.Errorf("productsById %d: no such product", id)
+			return
+		}
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "product not found"})
+		fmt.Errorf("productsById %d: %v", id, err)
+		return
+	}
+	c.IndentedJSON(http.StatusOK, pdt)
+
+}
+
+
+
 // &pdt.Product_id, &pdt.Name, &pdt.Spec, &pdt.Catg_id, &pdt.Price
+
+// DELETE FROM `table_name` [WHERE condition];
