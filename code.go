@@ -9,6 +9,7 @@ import (
 	//"time"
 	//"strconv"
 	// "os"
+	
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-sql-driver/mysql"
@@ -49,11 +50,11 @@ func main() {
         log.Printf("Create product table failed with error %s", err)
         return
     }
-	router.GET("/products", GetProducts)
-	//  router.GET("/products/:id", getProductsByCatg)
-	router.GET("/product-:id", GetProductByID)
-	router.POST("/addproduct", PostProducts)
-	router.GET("/deleteproduct-:id", DeleteProductByID)
+	router.GET("/get_products", GetProducts)
+	router.GET("/get_product_by_id-:id", GetProductByID)
+	router.POST("/add_product", PostProducts)
+	router.DELETE("/delete_product_by_id-:id", DeleteProductByID)
+	router.PUT("/update_product_by_id-:id", UpdateProductByID)
 
 
 	err = CreateInventoryTable(db)
@@ -61,10 +62,11 @@ func main() {
         log.Printf("Create product table failed with error %s", err)
         return
     }
-    router.GET("/inventorys", GetInventorys)
-	router.GET("/inventory-:id", GetInventoryByID)
-	router.POST("/addinventory", PostInventorys)
-	router.GET("/deleteinventory-:id", DeleteInventoryByID)
+    router.GET("/get_inventory", GetInventory)
+	router.GET("/get_inventory_by_id-:id", GetInventoryByID)
+	router.POST("/add_inventory", PostInventory)
+	router.DELETE("/delete_inventory_by_id-:id", DeleteInventoryByID)
+	router.PUT("/update_inventory_by_id-:id", UpdateInventoryByID)
 
 
 	err = CreateCategoryTable(db)
@@ -72,10 +74,11 @@ func main() {
         log.Printf("Create product table failed with error %s", err)
         return
     }
-    router.GET("/categorys", GetCategorys)
-	router.GET("/category-:id", GetCategoryByID)
-	router.POST("/addcategory", PostCategorys)
-	router.GET("/deletecategory-:id", DeleteCategoryByID)
+    router.GET("/get_category", GetCategory)
+	router.GET("/get_category_by_id-:id", GetCategoryByID)
+	router.POST("/add_category", PostCategory)
+	router.DELETE("/delete_category_by_id-:id", DeleteCategoryByID)
+	router.PUT("/update_category_by_id-:id", UpdateCategoryByID)
 
 
 	err = CreateCartTable(db)
@@ -83,10 +86,11 @@ func main() {
         log.Printf("Create product table failed with error %s", err)
         return
     }
-	router.GET("/carts", GetCarts)
-	router.GET("/cart-:id", GetCartByID)
-	router.POST("/addcart", PostCarts)
-	router.GET("/deletecart-:id", DeleteCartByID)
+	router.GET("/get_cart", GetCart)
+	router.GET("/get_cart_by_id-:id", GetCartByID)
+	router.POST("/add_cart", PostCart)
+	router.DELETE("/delete_cart_by_id-:id", DeleteCartByID)
+	router.PUT("/update_cart_by_id-:id", UpdateCartByID)
 
 
 	router.Run("localhost:8080")

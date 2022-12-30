@@ -14,10 +14,16 @@ import (
 )
 
 type product struct {
-	Product_id int    `json:"id"`
-	Name       string `json:"title"`
-	Spec       string `json:"artist"`
-	Catg_id    int
+	Product_id int    `json:"product_id"`
+	Name       string `json:"name"`
+	Spec       string `json:"spec"`
+	Catg_id    int	  `json:"catg_id"`
+	Price      float64 `json:"price"`
+}
+
+type productsimple struct {
+	Product_id int    `json:"product_id"`
+	Name       string `json:"name"`
 	Price      float64 `json:"price"`
 }
 
@@ -73,9 +79,9 @@ func GetProductByID(c *gin.Context) {
 // getProducts responds with the list of all products as JSON.
 func GetProducts(c *gin.Context) {
 
-	var products []product
+	var products []productsimple
 
-	rows, err := db.Query("SELECT * FROM product")
+	rows, err := db.Query("SELECT product_id,name,price FROM product")
 	if err != nil {
 		fmt.Errorf("products : %v", err)
 		return
@@ -83,8 +89,8 @@ func GetProducts(c *gin.Context) {
 	defer rows.Close()
 	// Loop through rows, using Scan to assign column data to struct fields.
 	for rows.Next() {
-		var pdt product
-		if err := rows.Scan(&pdt.Product_id, &pdt.Name, &pdt.Spec, &pdt.Catg_id, &pdt.Price); err != nil {
+		var pdt productsimple
+		if err := rows.Scan(&pdt.Product_id, &pdt.Name, &pdt.Price); err != nil {
 			fmt.Errorf("products : %v", err)
 			return
 		}
@@ -111,6 +117,7 @@ func PostProducts(c *gin.Context) {
 		return
 	}
 
+
 	result, err := db.Exec("INSERT INTO product (product_id, name, spec, catg_id, price) VALUES (?, ?, ?, ?, ?)", newProduct.Product_id, newProduct.Name, newProduct.Spec, newProduct.Catg_id, newProduct.Price)
 	// Add the new product to the slice.
 	if err != nil {
@@ -123,6 +130,7 @@ func PostProducts(c *gin.Context) {
 		return
 	}
 	fmt.Print(id)
+
 	c.IndentedJSON(http.StatusCreated, newProduct)
 }
 
@@ -131,7 +139,7 @@ func DeleteProductByID(c *gin.Context) {
 
 	var pdt product
 
-	row := db.QueryRow("DELETE FROM product WHERE product_id = ?", id)
+	row := db.QueryRow("SELECT * FROM product WHERE product_id = ?", id)
 	if err := row.Scan(&pdt.Product_id, &pdt.Name, &pdt.Spec, &pdt.Catg_id, &pdt.Price); err != nil {
 		if err == sql.ErrNoRows {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"message": "product not found"})
@@ -142,11 +150,41 @@ func DeleteProductByID(c *gin.Context) {
 		fmt.Errorf("productsById %d: %v", id, err)
 		return
 	}
-	c.IndentedJSON(http.StatusOK, pdt)
+	db.QueryRow("DELETE FROM product WHERE product_id = ?", id)
+	c.IndentedJSON(http.StatusOK, gin.H{"message": "product is deleted"})
 
 }
 
 
+func UpdateProductByID(c *gin.Context) {
+	var newProduct product
+	id, _ := strconv.Atoi(c.Param("id"))
+	// Call BindJSON to bind the received JSON to
+	// newProduct.
+	if err := c.BindJSON(&newProduct); err != nil {
+		return
+	}
+
+	if(newProduct.Product_id !=0){db.Exec("UPDATE product SET product_id= ? WHERE product_id = ?",newProduct.Product_id, id)}
+	if(newProduct.Name !=""){db.Exec("UPDATE product SET name= ? WHERE product_id = ?",newProduct.Name, id)}
+	if(newProduct.Spec !=""){db.Exec("UPDATE product SET spec= ? WHERE product_id = ?",newProduct.Spec, id)}
+	if(newProduct.Catg_id !=0){db.Exec("UPDATE product SET catg_id= ? WHERE product_id = ?",newProduct.Catg_id, id)}
+	if(newProduct.Price !=0){db.Exec("UPDATE product SET price= ? WHERE product_id = ?",newProduct.Price, id)}
+	//result, err := db.Exec("UPDATE product  SET (product_id, name, spec, catg_id, price)= (newProduct.Product_id, newProduct.Name, newProduct.Spec, newProduct.Catg_id, newProduct.Price) WHERE product_id = ?",newProduct.Product_id, newProduct.Name, newProduct.Spec, newProduct.Catg_id, newProduct.Price, id)
+	// Add the new product to the slice.
+	// if err != nil {
+	// 	fmt.Errorf("addProduct: %v", err)
+	// 	return
+	// }
+	// id, err := result.LastInsertId()
+	// if err != nil {
+	// 	fmt.Errorf("addProduct: %v", err)
+	// 	return
+	// }
+	fmt.Print(id)
+	c.IndentedJSON(http.StatusCreated, newProduct)
+
+}
 
 // &pdt.Product_id, &pdt.Name, &pdt.Spec, &pdt.Catg_id, &pdt.Price
 

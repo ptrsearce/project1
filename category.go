@@ -14,8 +14,8 @@ import (
 )
 
 type category struct {
-	Category_id int `json:"id"`
-	Name     string
+	Category_id int `json:"catgeory_id"`
+	Name     string `json:"name"`
 }
 
 
@@ -65,13 +65,13 @@ func GetCategoryByID(c *gin.Context) {
 }
 
 // getCategorys responds with the list of all categorys as JSON.
-func GetCategorys(c *gin.Context) {
+func GetCategory(c *gin.Context) {
 
 	var categorys []category
 
 	rows, err := db.Query("SELECT * FROM category")
 	if err != nil {
-		fmt.Errorf("categorys : %v", err)
+		fmt.Errorf("category : %v", err)
 		return
 	}
 	defer rows.Close()
@@ -79,13 +79,13 @@ func GetCategorys(c *gin.Context) {
 	for rows.Next() {
 		var ctg category
 		if err := rows.Scan(&ctg.Category_id, &ctg.Name); err != nil {
-			fmt.Errorf("categorys : %v", err)
+			fmt.Errorf("category : %v", err)
 			return
 		}
 		categorys = append(categorys, ctg)
 	}
 	if err := rows.Err(); err != nil {
-		fmt.Errorf("categorys : %v", err)
+		fmt.Errorf("category : %v", err)
 		return
 	}
 
@@ -96,7 +96,7 @@ func GetCategorys(c *gin.Context) {
 // parameter sent by the client, then returns that category as a response.
 
 // postCategorys adds an category from JSON received in the request body.
-func PostCategorys(c *gin.Context) {
+func PostCategory(c *gin.Context) {
 	var newCategory category
 
 	// Call BindJSON to bind the received JSON to
@@ -125,7 +125,7 @@ func DeleteCategoryByID(c *gin.Context) {
 
 	var ctg category
 
-    row := db.QueryRow("DELETE FROM category WHERE category_id = ?", id)
+    row := db.QueryRow("SELECT * FROM category WHERE category_id = ?", id)
     if err := row.Scan(&ctg.Category_id, &ctg.Name); err!=nil{
         if err == sql.ErrNoRows {
            c.IndentedJSON(http.StatusNotFound, gin.H{"message": "category not found"})
@@ -136,8 +136,34 @@ func DeleteCategoryByID(c *gin.Context) {
         fmt.Errorf("categorysById %d: %v", id, err)
         return
 	}
-	c.IndentedJSON(http.StatusOK, ctg)
+	c.IndentedJSON(http.StatusOK, gin.H{"message": "category is deleted"})
 
 }
 
 // &ctg.Category_id, &ctg.Name, &ctg.Spec, &ctg.Catg_id, &ctg.Price
+
+func UpdateCategoryByID(c *gin.Context) {
+	var newCategory category
+	id, _ := strconv.Atoi(c.Param("id"))
+	// Call BindJSON to bind the received JSON to
+	// newCategory.
+	if err := c.BindJSON(&newCategory); err != nil {
+		return
+	}
+
+	if(newCategory.Category_id !=0){db.Exec("UPDATE category SET category_id= ? WHERE category_id = ?",newCategory.Category_id, id)}
+	if(newCategory.Name !=""){db.Exec("UPDATE category SET name= ? WHERE category_id = ?",newCategory.Name, id)}
+	// Add the new category to the slice.
+	// if err != nil {
+	// 	fmt.Errorf("addCategory: %v", err)
+	// 	return
+	// }
+	// id, err := result.LastInsertId()
+	// if err != nil {
+	// 	fmt.Errorf("addCategory: %v", err)
+	// 	return
+	// }
+	fmt.Print(id)
+	c.IndentedJSON(http.StatusCreated, newCategory)
+
+}
